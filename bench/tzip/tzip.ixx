@@ -5,3 +5,4 @@ export module tzip;
 import std.core;
 
 export import tzipper;
+export import tunzipper;

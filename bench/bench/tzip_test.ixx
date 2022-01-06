@@ -20,6 +20,10 @@ export auto test_tzip(std::ranges::input_range auto& input,
 
 	auto decompression_buffer = std::vector<uint8_t>(input.size());
 
+	auto unzipper = tunzipper();
+
+	unzipper.unzip(input, output);
+
 	auto range = std::ranges::subrange(output.begin(), output.begin() + written);
 	zipper.unzip(range, decompression_buffer);
 

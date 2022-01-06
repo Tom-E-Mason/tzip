@@ -47,6 +47,24 @@ public:
         }
     }
 
+    auto serialise_huffman_tree(std::ranges::output_range<uint8_t> auto& out)
+    {
+        auto out_it = out.begin();
+
+        for (const auto& [key, value] : m_huff_tree)
+        {
+            out_it = std::copy(key.begin(), key.end(), out_it);
+            *(out_it++) = ':';
+
+            out_it = std::copy(value.begin(), value.end(), out_it);
+            *(out_it++) = ':'; // will write one too many colons...
+        }
+
+        *out_it = '\0'; // this overwrites it to signal end of header
+
+        return out_it;
+    }
+
     auto compress(std::ranges::input_range auto& in,
                   std::ranges::output_range<uint8_t> auto& out)
     {
@@ -100,7 +118,10 @@ public:
 
         m_huff_tree = huffman_tree(weightings);
 
-        compress(in, out);
+        auto out_it = serialise_huffman_tree(out);
+
+        auto out_range = std::ranges::subrange(out_it, out.end());
+        compress(in, out_range);
 
         return tzip_info(in.size(), m_bytes_written);
     }

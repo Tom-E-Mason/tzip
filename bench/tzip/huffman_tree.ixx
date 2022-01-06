@@ -147,9 +147,37 @@ public:
 	}
 
 public:
+	auto begin()  { return m_tree_patterns.begin();  }
+	auto end()    { return m_tree_patterns.end();    }
+	auto cbegin() { return m_tree_patterns.cbegin(); }
+	auto cend()   { return m_tree_patterns.cend();   }
+
+
+public:
 	const auto& operator[](const std::string& key) const
 	{
 		return m_tree_patterns.at(key);
+	}
+
+	auto find_node(const std::string& word) -> std::shared_ptr<node>
+	{
+		auto stack = std::stack<std::shared_ptr<node>>();
+		stack.push(m_root);
+
+		while (!stack.empty())
+		{
+			auto top = std::move(stack.top());
+			stack.pop();
+
+			if (top->string() == word) return top;
+
+			if (top->left())
+				stack.push(top->left());
+			if (top->right())
+				stack.push(top->right());
+		}
+
+		return nullptr;
 	}
 
 private:

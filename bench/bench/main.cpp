@@ -17,12 +17,12 @@ int main() {
 
 	using namespace std::chrono_literals;
 
-	auto file_data = load_file("../holmes.txt");
+	auto file_data = load_file("../test.txt");
 	const auto original_size = file_data.size();
 
 	std::cout << std::format("original size: {} bytes\n", original_size);
 
-	auto output_buffer = std::vector<uint8_t>(original_size);
+	auto output_buffer = std::vector<uint8_t>(original_size * 2);
 
 	const auto zlib_output_size = [&]
 	{
