@@ -151,8 +151,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="huffman_tree.ixx" />
     <ClCompile Include="ordered_vector.ixx" />
     <ClCompile Include="tzip.ixx" />
+    <ClCompile Include="tzipper.ixx" />
+    <ClCompile Include="tunzipper.ixx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

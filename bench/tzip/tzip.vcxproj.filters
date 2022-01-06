@@ -21,5 +21,14 @@
     <ClCompile Include="ordered_vector.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="huffman_tree.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tzipper.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tunzipper.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
