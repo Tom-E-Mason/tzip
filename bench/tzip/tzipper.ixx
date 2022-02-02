@@ -18,7 +18,7 @@ public:
     tzipper() = default;
 
 public:
-    auto gather_words(std::ranges::input_range auto& in)
+    void gather_words(std::ranges::input_range auto& in)
     {
         std::string word;
 
@@ -30,7 +30,7 @@ public:
 
                 if (!word.empty())
                 {
-                    emplace_or_increment(word);
+                    emplace_or_increment(word, m_weightings);
                     word.resize(0);
                 }
             }
@@ -42,25 +42,164 @@ public:
 
         if (!word.empty())
         {
-            emplace_or_increment(word);
+            emplace_or_increment(word, m_weightings);
             word.resize(0);
+        }
+
+        gather_n_words(in, 2);
+    }
+
+    void gather_n_words(std::ranges::input_range auto& in,
+                        std::size_t n)
+    {
+        auto words = std::vector<std::string>();
+
+        std::string word;
+
+        for (auto c : in)
+        {
+            if (!std::isalnum(c))
+            {
+                if (!word.empty())
+                {
+                    words.push_back(word);
+                    word.clear();
+                }
+
+                words.emplace_back(1, c);
+            }
+            else
+            {
+                word.push_back(c);
+            }
+        }
+
+        gather_n_words(n, words);
+    }
+
+    void gather_n_words(std::size_t n,
+                        const std::vector<std::string>& words)
+    {
+        if (n != 2)
+            throw std::exception("not implemented");
+
+        if (n > words.size())
+            n = words.size();
+
+        const auto first_last_interval = 2 * n - 1;
+
+        // ' ' space is a word
+        const auto max_words = n + 1;
+
+        auto word_count = std::size_t();
+
+        auto first = words.cbegin();
+
+        while (*first == " ")
+            ++first;
+
+        auto last = first + first_last_interval;
+
+        std::string word_group;
+        bool space = false;
+
+        while (last != words.cend())
+        {
+            // stores group of n words
+            for (auto it = first; it != last; ++it)
+            {
+                if (it->length() == 1)
+                {
+                    if (*it == " " && !space)
+                    {
+                        space = true;
+                    }
+                    else
+                    {
+                        word_group.clear();
+                        break;
+                    }
+                }
+                else
+                {
+                    space = false;
+                }
+                
+                word_group.append(*it);
+            }
+
+            space = false;
+
+            // saves group if valid
+            if (!word_group.empty())
+            {
+                emplace_or_increment(word_group, m_weightings2);
+                word_group.clear();
+            }
+
+            do
+                ++first;
+            while (*first == " ");
+
+            last = first;
+
+            for (auto i = first_last_interval; i > 0 && last != words.cend(); --i)
+                ++last;
+        }
+
+        auto space_weight = m_char_weightings.find(' ');
+
+        for (auto& [key, value] : m_weightings2)
+        {
+            auto space = std::ranges::find(key, ' ');
+
+            const auto sv1 = std::string_view(key.cbegin(), space);
+            auto first_weight = m_weightings.find(std::string(sv1));
+
+            const auto sv2 = std::string_view(space + 1, key.cend());
+            auto second_weight = m_weightings.find(std::string(sv2));
+
+            const auto individual_weighting = first_weight->second
+                + second_weight->second
+                + space_weight->second;
+
+            if (value > individual_weighting / 2)
+            {
+                const auto aggregate_frequency = value / key.length();
+
+                first_weight->second -= sv1.length() * aggregate_frequency;
+                --space_weight->second;
+                second_weight->second -= sv2.length() * aggregate_frequency;
+
+                m_weightings.insert(std::pair(key, value));
+            }
         }
     }
 
-    auto serialise_huffman_tree(std::ranges::output_range<uint8_t> auto& out)
+    auto write_header(std::ranges::output_range<uint8_t> auto& out)
     {
         auto out_it = out.begin();
 
+        auto weighting = std::string();
+
+        std::size_t word_count = 0;
+
         for (const auto& [key, value] : m_huff_tree)
         {
-            out_it = std::copy(key.begin(), key.end(), out_it);
+            out_it = std::copy(key.cbegin(), key.cend(), out_it);
             *(out_it++) = ':';
 
-            out_it = std::copy(value.begin(), value.end(), out_it);
+            weighting = std::to_string(value.first);
+
+            out_it = std::copy(weighting.cbegin(), weighting.cend(), out_it);
             *(out_it++) = ':'; // will write one too many colons...
+
+            word_count += value.first / key.length();
+            m_bytes_written += (key.length() + weighting.length() + 2);
         }
 
-        *out_it = '\0'; // this overwrites it to signal end of header
+        // this overwrites last colon to signal end of huffman tree
+        *(out_it - 1) = '\0';
 
         return out_it;
     }
@@ -85,13 +224,13 @@ public:
 
                 if (!word.empty())
                 {
-                    out_it = zip_word(m_huff_tree[word],
+                    out_it = zip_word(m_huff_tree[word].second,
                                       sr);
                     word.resize(0);
                     sr = subrange(out_it, out.end());
                 }
 
-                out_it = zip_word(m_huff_tree[std::string(1, c)],
+                out_it = zip_word(m_huff_tree[std::string(1, c)].second,
                                   sr);
             }
             else
@@ -103,7 +242,7 @@ public:
         auto sr = subrange(out_it, out.end());
 
         if (!word.empty())
-            out_it = zip_word(m_huff_tree[word], sr);
+            out_it = zip_word(m_huff_tree[word].second, sr);
 
         if (m_byte_index > 0)
             out_it = write_byte(out_it);
@@ -118,7 +257,7 @@ public:
 
         m_huff_tree = huffman_tree(weightings);
 
-        auto out_it = serialise_huffman_tree(out);
+        auto out_it = write_header(out);
 
         auto out_range = std::ranges::subrange(out_it, out.end());
         compress(in, out_range);
@@ -130,7 +269,6 @@ public:
                std::ranges::output_range<uint8_t> auto& out)
     {
         auto traversal_node = m_huff_tree.get_root();
-        int byte_index = 0;
 
         auto out_it = out.begin();
 
@@ -206,9 +344,9 @@ private:
     }
 
 private:
-    void emplace_or_increment(std::string& key)
+    void emplace_or_increment(std::string& key, auto& weightings)
     {
-        const auto [it, success] = m_weightings.try_emplace(key, key.length());
+        const auto [it, success] = weightings.try_emplace(key, key.length());
 
         if (!success)
             it->second += key.length();
@@ -225,6 +363,7 @@ private:
 private:
     std::unordered_map<uint8_t, std::size_t> m_char_weightings; // replace with flat_map
     std::unordered_map<std::string, std::size_t> m_weightings;
+    std::unordered_map<std::string, std::size_t> m_weightings2;
     uint8_t m_output_byte = 0;
     int m_byte_index = 0;
     std::size_t m_bytes_written = 0;

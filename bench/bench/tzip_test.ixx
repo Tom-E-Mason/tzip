@@ -22,10 +22,13 @@ export auto test_tzip(std::ranges::input_range auto& input,
 
 	auto unzipper = tunzipper();
 
-	unzipper.unzip(input, output);
+	auto decompression_input = output;
+	decompression_input.resize(output.size() / 2);
 
-	auto range = std::ranges::subrange(output.begin(), output.begin() + written);
-	zipper.unzip(range, decompression_buffer);
+	unzipper.unzip(decompression_input, decompression_buffer);
+
+	//auto range = std::ranges::subrange(output.begin(), output.begin() + written);
+	//zipper.unzip(range, decompression_buffer);
 
 	if (!std::ranges::equal(input, decompression_buffer))
 		throw std::exception();

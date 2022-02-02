@@ -12,7 +12,8 @@ void print_result(std::size_t original_size,
 auto load_file(std::string filename) -> std::vector<uint8_t>;
 auto percentage(std::size_t num, std::size_t dom) -> float;
 
-int main() {
+int main()
+{
 	std::cout << "Hello, world\n";
 
 	using namespace std::chrono_literals;

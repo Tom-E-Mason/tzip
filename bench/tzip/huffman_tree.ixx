@@ -74,6 +74,11 @@ public:
 		return m_root;
 	}
 
+	auto get_word_count()
+	{
+		return m_word_count;
+	}
+
 	huffman_tree() = default;
 
 	huffman_tree(const std::vector<pair_type>& weightings_vec)
@@ -81,7 +86,11 @@ public:
 		auto weightings_set = std::set<pair_type, comp>();
 
 		for (auto& [string, weighting] : weightings_vec)
+		{
 			weightings_set.insert(pair_type(string, weighting));
+
+			m_word_count += weighting / string.length();
+		}
 
 		auto nodes = ordered_vector<std::shared_ptr<node>, ptr_comp>();
 
@@ -212,7 +221,12 @@ private:
 
 			if (!top.first->string().empty())
 			{
-				m_tree_patterns.emplace(top.first->string(), std::move(top.second));
+				auto value =
+					std::pair<std::size_t, std::vector<uint8_t>>(top.first->weighting(),
+																 top.second);
+
+				m_tree_patterns.emplace(top.first->string(),
+										std::move(value));
 				continue;
 			}
 
@@ -264,5 +278,7 @@ private:
 
 private:
 	std::shared_ptr<node> m_root;
-	std::unordered_map<std::string, std::vector<uint8_t>> m_tree_patterns;
+	std::unordered_map<std::string, std::pair<std::size_t, std::vector<uint8_t>>> m_tree_patterns;
+
+	std::size_t m_word_count = 0;
 };
